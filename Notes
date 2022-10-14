@@ -1,0 +1,21 @@
+These are my notes on this project.
+
+2022-10-09
+The exportDFtoAcciumRunlog.R script requires that the other lab's runlog is
+already in a data.frame format. However, I believe it would not be difficult to
+modify this so that it would read in the other lab's runlog, identify the
+column widths, identify the column names, then read it in as a data.frame. Then,
+it would pull all colomns matching those used in Accium runlogs and fill in 0
+for all columns expected by Accium runlogs and not included in the other lab's
+runlog. This would allow a new runlog to be built that matched Accium's.
+
+Also, currently, to identify the column widths and names of an Accium runlog,
+the program actually reads in an Accium runlog. I think I will just save the
+column width and names objects as RDS files that can be read in by the program.
+That should be easier and faster than reading in a runlog and identifying column
+information everytime the program runs.
+
+Then, all of this will be put into a Shiny app that will allow the user to
+upload the other lab's runlog, view, and then download a new Accium formatted
+runlog. This will allow direct input into CRABS as long as all necessary columns
+for CRABS to run are included.
