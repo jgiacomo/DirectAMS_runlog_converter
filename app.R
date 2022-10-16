@@ -27,6 +27,8 @@ ui <- fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
+           HTML("<H4>The External Lab's Runlog</H4></br>"),
+           tableOutput("header"),
            tableOutput("runlog")
         )
     )
@@ -39,34 +41,55 @@ server <- function(input, output) {
   source("R/convertRunlogToDataframe.R")
   source("R/getHeaderFromRunlog.R")
   
-  vals <- reactiveValues()
-  
-  eventReactive(input$runlogIn, {
-    vals$runlog <- convertRunlogToDataframe(input$runlogIn)
-    vals$header <- getHeaderFromRunlog(input$runlogIn)
+  # Get runlog from input file
+  runlog <- reactive({
+    req(input$runlogIn)
     
-    #### DEBUG ####
-    print(str(vals$runlog()))
+    colWidths <- fwf_empty(input$runlogIn$datapath, skip=4)
+    colNames <- read_fwf(input$runlogIn$datapath, colWidths, skip=4,
+                         show_col_types=FALSE )[1,]
+    
+    df <- read_fwf(input$runlogIn$datapath, colWidths, skip=6,
+                   show_col_types=FALSE)
+    names(df) <- as.character(colNames)
+    df
+  })
+  
+  # Get header text from input file
+  header.txt <- reactive({
+    header.txt <- read_lines(input$runlogIn$datapath,n_max=4)
+  })
+  
+  # Get header as a data frame from input file
+  header.table <- reactive({
+    headerWidths <- fwf_empty(input$runlogIn$datapath, skip=0, n=2)
+    headerDF <- read_fwf(input$runlogIn$datapath, headerWidths, skip=0, n_max=3,
+                         show_col_types=FALSE )
+    names(headerDF) <- as.character(headerDF[1,])
+    header.table <- headerDF %>% slice(2,3)
+    header.table
+  })
+  
+  output$header <- renderTable({
+    req(input$runlogIn)
+    header.table()
   })
   
   output$runlog <- renderTable({
-    req(input$runlogIn, vals$runlog, vals$header)
+    req(input$runlogIn)
     
-    df <- convertDFtoDAMSrunlog(vals$runlog,
-                                outputFile=NULL,
-                                headerinfo=vals$header)
-    
-    df
+    runlog()
   })
   
   output$downloadData <- downloadHandler(
     filename = function() {
       "runlog.cat"
     },
-    content = function(file) {
-      convertDFtoDAMSrunlog(vals$runlog,
-                            outputFile=file,
-                            headerinfo=vals$header)
+    content = function(con) {
+      convertDFtoDAMSrunlog(runlog(),
+                            outputFile="CRABS_runlog.cat",
+                            headerinfo=header.txt())
+      file.copy("CRABS_runlog.cat", con)
     },
     contentType = "text/fwf"
   )
